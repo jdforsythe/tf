@@ -1,0 +1,52 @@
+version: 2
+
+project_name: tf
+
+builds:
+  - id: tf
+    binary: tf
+    main: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^chore:"
+
+brews:
+  - name: tf
+    repository:
+      owner: jdforsythe
+      name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/jdforsythe/tf
+    description: "A prettier, interactive TUI for terraform plan/apply/destroy"
+    license: MIT
+    install: |
+      bin.install "tf"
+    test: |
+      system "#{bin}/tf", "wrapper-version"
+
+release:
+  footer: |
+    ---
+    Install via Homebrew: `brew install jdforsythe/tap/tf`
