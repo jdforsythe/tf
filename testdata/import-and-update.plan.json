@@ -1,0 +1,50 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.15.0",
+  "resource_changes": [
+    {
+      "address": "terraform_data.imported",
+      "mode": "managed",
+      "type": "terraform_data",
+      "name": "imported",
+      "change": {
+        "actions": ["no-op"],
+        "before": {"id": "aaaa", "input": null},
+        "after": {"id": "aaaa", "input": null},
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {},
+        "importing": {"id": "aaaa"}
+      }
+    },
+    {
+      "address": "terraform_data.imported_and_updated",
+      "mode": "managed",
+      "type": "terraform_data",
+      "name": "imported_and_updated",
+      "change": {
+        "actions": ["update"],
+        "before": {"id": "bbbb", "input": "old"},
+        "after": {"id": "bbbb", "input": "new"},
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {},
+        "importing": {"id": "bbbb"}
+      }
+    },
+    {
+      "address": "terraform_data.untouched",
+      "mode": "managed",
+      "type": "terraform_data",
+      "name": "untouched",
+      "change": {
+        "actions": ["no-op"],
+        "before": {"id": "cccc", "input": null},
+        "after": {"id": "cccc", "input": null},
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    }
+  ]
+}
