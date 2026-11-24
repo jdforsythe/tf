@@ -332,7 +332,11 @@ func (m model) handleExit(msg exitMsg) (tea.Model, tea.Cmd) {
 				m.final = append(m.final, stGreen.Render(fmt.Sprintf("✓ Destroy complete in %s — %s destroyed.", fmtDur(elapsed), plural(n, "resource"))))
 			} else {
 				if s := m.summary; s != nil {
-					m.final = append(m.final, stGreen.Render(fmt.Sprintf("✓ Apply complete in %s — %d added, %d changed, %d destroyed.", fmtDur(elapsed), s.Add, s.Change, s.Remove)))
+					counts := fmt.Sprintf("%d added, %d changed, %d destroyed", s.Add, s.Change, s.Remove)
+					if s.Import > 0 {
+						counts = fmt.Sprintf("%d imported, ", s.Import) + counts
+					}
+					m.final = append(m.final, stGreen.Render(fmt.Sprintf("✓ Apply complete in %s — %s.", fmtDur(elapsed), counts)))
 				} else {
 					m.final = append(m.final, stGreen.Render(fmt.Sprintf("✓ Apply complete in %s — %s.", fmtDur(elapsed), plural(m.completed, "resource"))))
 				}
@@ -364,7 +368,7 @@ func (m model) handleShow(msg showMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if m.counts.total() == 0 && outputChanges == 0 {
+	if !m.counts.hasChanges() && outputChanges == 0 {
 		m.final = append(m.final, stGreen.Render("✓ No changes. Infrastructure matches the configuration."))
 		m.appendDiagRecap()
 		m.quitting = true
@@ -395,22 +399,33 @@ func (m model) beginApply() (tea.Model, tea.Cmd) {
 func (m *model) buildTree() {
 	m.nodes = nil
 	add := func(rc *ResourceChange, action string) {
+		reason := prettifyReason(rc.ActionReason)
+		detail := diffResource(rc.Change)
+		if rc.Change.Importing != nil {
+			if action == actImport {
+				detail = append([]diffLine{{sym: ' ', text: importText(rc.Change.Importing)}}, detail...)
+			} else if reason == "" {
+				reason = "imported"
+			} else {
+				reason += ", imported"
+			}
+		}
 		m.nodes = append(m.nodes, &node{
 			addr:   rc.Address,
 			action: action,
-			reason: prettifyReason(rc.ActionReason),
-			detail: diffResource(rc.Change),
+			reason: reason,
+			detail: detail,
 		})
 	}
 	byAction := map[string][]*ResourceChange{}
 	for _, rc := range m.plan.ResourceChanges {
-		a := actionOf(rc.Change.Actions)
+		a := rc.action()
 		if a == actNoop {
 			continue
 		}
 		byAction[a] = append(byAction[a], rc)
 	}
-	for _, a := range []string{actCreate, actUpdate, actReplace, actDelete, actRead} {
+	for _, a := range []string{actImport, actCreate, actUpdate, actReplace, actDelete, actRead} {
 		rcs := byAction[a]
 		sort.Slice(rcs, func(i, j int) bool { return rcs[i].Address < rcs[j].Address })
 		for _, rc := range rcs {
@@ -420,8 +435,17 @@ func (m *model) buildTree() {
 	m.rebuildRows()
 }
 
+func importText(imp *Importing) string {
+	if imp.ID == "" {
+		return "imported into state"
+	}
+	return "imported with id " + imp.ID
+}
+
 func sectionTitle(action string, n int) string {
 	switch action {
+	case actImport:
+		return fmt.Sprintf("⇣ import (%d)", n)
 	case actCreate:
 		return fmt.Sprintf("＋ create (%d)", n)
 	case actUpdate:
@@ -678,6 +702,9 @@ func (m model) handleKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m *model) planRecap() {
 	c := m.counts
 	line := fmt.Sprintf("Plan: %d to add, %d to change, %d to destroy", c.add+c.replace, c.change, c.destroy+c.replace)
+	if c.imports > 0 {
+		line = fmt.Sprintf("Plan: %d to import, ", c.imports) + strings.TrimPrefix(line, "Plan: ")
+	}
 	if c.replace > 0 {
 		line += fmt.Sprintf(" (%d replaced)", c.replace)
 	}

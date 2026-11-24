@@ -228,6 +228,9 @@ func (m model) viewReview() string {
 		title = "Destroy plan"
 	}
 	parts := []string{}
+	if c.imports > 0 {
+		parts = append(parts, stCyan.Render(fmt.Sprintf("⇣%d import", c.imports)))
+	}
 	if c.add > 0 {
 		parts = append(parts, stGreen.Render(fmt.Sprintf("+%d add", c.add)))
 	}

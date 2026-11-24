@@ -29,6 +29,8 @@ func actionGlyph(action string) (string, lipgloss.Style) {
 		return "±", stMagenta
 	case actRead:
 		return "↻", stCyan
+	case actImport:
+		return "⇣", stCyan
 	default:
 		return "·", stDim
 	}
